@@ -312,3 +312,5 @@ consul.service.consul.  0       IN      A       10.138.0.6
 ;; MSG SIZE  rcvd: 98
 
 ```
+
+Now any pod running in Kubernetes can use `{service_name}.service.consul` DNS name to lookup services registered in Consul.
