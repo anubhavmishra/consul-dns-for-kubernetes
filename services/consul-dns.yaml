@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul-dns
+  namespace: kube-system
+  labels:
+    name: consul-dns
+spec:
+  ports:
+    - name: dns-tcp
+      port: 53
+      protocol: "TCP"
+      targetPort: dns-tcp
+    - name: dns-udp
+      port: 53
+      protocol: "UDP"
+      targetPort: dns-udp
+  selector:
+    name: consul

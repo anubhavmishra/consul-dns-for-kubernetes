@@ -1,0 +1,66 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: consul
+  namespace: kube-system
+  labels:
+    name: consul
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      name: consul
+  template:
+    metadata:
+      labels:
+        name: consul
+    spec:
+      containers:
+      - name: consul
+        image: "consul:1.0.6"
+        env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+        args:
+          - "agent"
+          - "-advertise=$(POD_IP)"
+          - "-bind=0.0.0.0"
+          - "-client=0.0.0.0"
+          - "-data-dir=/var/consul"
+          - "-datacenter=dc1"
+          - "-retry-join=provider=gce tag_value=consul-server"
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - consul leave
+        ports:
+            - name: dns-tcp
+              containerPort: 8600
+              protocol: "TCP"
+            - name: dns-udp
+              containerPort: 8600
+              protocol: "UDP"
+            - name: http
+              containerPort: 8500
+              protocol: "TCP"
+            - name: https
+              containerPort: 8443
+              protocol: "TCP"
+            - name: serf-lan-tcp
+              containerPort: 8301
+              protocol: "TCP"
+            - name: serf-lan-udp
+              containerPort: 8301
+              protocol: "UDP"
+        volumeMounts:
+        - name: consul-data
+          mountPath: /var/consul
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: consul-data
+        emptyDir: {}
