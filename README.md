@@ -35,12 +35,37 @@ gcloud beta container clusters create us-west1-b \
   --scopes "cloud-platform,storage-ro,logging-write,monitoring-write,service-control,service-management,https://www.googleapis.com/auth/ndev.clouddns.readwrite"
 ```
 
-*The scopes above can be tailored towards the permissions you might need.*
+*The scopes above can be tailored towards the permissions you might need.* 
+
+*This might take a few moments to complete.*
+
+```bash
+Creating cluster us-west1-b...done.
+Created [https://container.googleapis.com/v1/projects/project-name/zones/us-west1-b/clusters/us-west1-b].
+To inspect the contents of your cluster, go to: https://console.cloud.google.com/kubernetes/workload_/gcloud/us-west1-b/us-west1-b?project=project-name
+kubeconfig entry generated for us-west1-b.
+NAME        LOCATION    MASTER_VERSION  MASTER_IP      MACHINE_TYPE   NODE_VERSION  NUM_NODES  STATUS
+us-west1-b  us-west1-b  1.8.7-gke.1     35.203.190.18  n1-standard-2  1.8.7-gke.1   3          RUNNING
+```
 
 Save cluster credentials
 
 ```bash
 gcloud container clusters get-credentials us-west1-b
+```
+
+Validate Kubernetes cluster
+
+```bash
+kubectl get componentstatus
+```
+
+```bash
+NAME                 STATUS    MESSAGE              ERROR
+scheduler            Healthy   ok
+controller-manager   Healthy   ok
+etcd-0               Healthy   {"health": "true"}
+etcd-1               Healthy   {"health": "true"}
 ```
 
 ### Clone Repository
@@ -74,11 +99,48 @@ gcloud compute instances create consul-1 consul-2 consul-3 \
   --image-project ubuntu-os-cloud \
   --image-family ubuntu-1604-lts \
   --boot-disk-size 250GB \
-  --machine-type n1-standard-1 \  
+  --machine-type n1-standard-1 \
   --can-ip-forward \
   --scopes default,compute-ro \
   --tags "consul-server" \
   --metadata-from-file startup-script=scripts/bootstrap-consul-server.sh
+```
+
+```bash
+Created [https://www.googleapis.com/compute/v1/projects/hc-da-test/zones/us-west1-b/instances/consul-3].
+Created [https://www.googleapis.com/compute/v1/projects/hc-da-test/zones/us-west1-b/instances/consul-1].
+Created [https://www.googleapis.com/compute/v1/projects/hc-da-test/zones/us-west1-b/instances/consul-2].
+NAME      ZONE        MACHINE_TYPE   PREEMPTIBLE  INTERNAL_IP  EXTERNAL_IP     STATUS
+consul-3  us-west1-b  n1-standard-1               10.138.0.5   35.199.174.16   RUNNING
+consul-1  us-west1-b  n1-standard-1               10.138.0.7   35.197.101.115  RUNNING
+consul-2  us-west1-b  n1-standard-1               10.138.0.6   35.230.9.80     RUNNING
+```
+
+*The Consul nodes might take a few moments to join the cluster.*
+
+Validate Consul cluster
+
+```bash
+gcloud compute ssh consul-1
+```
+
+```bash
+username@consul-1:~$ consul members
+Node      Address          Status  Type    Build  Protocol  DC   Segment
+consul-1  10.138.0.7:8301  alive   server  1.0.5  2         dc1  <all>
+consul-2  10.138.0.6:8301  alive   server  1.0.5  2         dc1  <all>
+consul-3  10.138.0.5:8301  alive   server  1.0.5  2         dc1  <all>
+```
+
+```bash
+username@consul-1:~$ exit
+```
+
+Logout of `consul-1`
+
+```bash
+logout
+Connection to 35.197.101.115 closed.
 ```
 
 Create consul deployment
@@ -172,9 +234,37 @@ data:
 EOF
 ```
 
+```bash
+Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply
+configmap "kube-dns" configured
+```
+
 This deligates `.consul` domain to Consul DNS interface exposed by `consul-dns` service.
 
+Validate configmap
+
+```bash
+kubectl describe configmap kube-dns --namespace=kube-system
+```
+
+```bash
+Name:         kube-dns
+Namespace:    kube-system
+Labels:       addonmanager.kubernetes.io/mode=EnsureExists
+Annotations:  kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"v1","data":{"stubDomains":"{\"consul\": [\"10.35.247.84\"]}\n"},"kind":"ConfigMap","metadata":{"annotations":{},"labels":{"addonmanager....
+
+Data
+====
+stubDomains:
+----
+{"consul": ["10.35.247.84"]}
+
+Events:  <none>
+```
+
 Test consul dns from inside kubernetes
+
+THe one-time job does a DNS lookup for the `consul` service running on the Consul servers from inside the Kubernetes cluster. This helps validate that services registered in Consul can be discovered using DNS based discovery.
 
 ```bash
 kubectl apply -f job/dns.yaml
