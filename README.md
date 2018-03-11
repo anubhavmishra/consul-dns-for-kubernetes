@@ -61,11 +61,11 @@ Use the following command to go to tutorial directory
 cd consul-dns-for-kubernetes
 ```
 
-## Bootstrap Consul Server
+## Bootstrap Consul Servers
 
 This tutorial assumes that the consul cluster is not running on Kubernetes. If you want to run a consul cluster on Kubernetes, follow the [consul-on-kubernetes](https://github.com/kelseyhightower/consul-on-kubernetes) by [Kelsey Hightower](https://github.com/kelseyhightower/).
 
-In this tutorial, we will create a 3 node consul cluster.
+In this tutorial, we will create a 3 node Consul cluster.
 
 Create Consul Servers
 
@@ -109,7 +109,7 @@ kubectl apply -f deployments/consul.yaml
 deployment "consul" created
 ```
 
-This will create a deployment with two replicas of the consul agent running in client mode.
+This will create a deployment with two replicas of the Consul agent running in client mode.
 
 Check consul deployment, list pods for the deployment
 
